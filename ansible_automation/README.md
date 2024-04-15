@@ -63,7 +63,7 @@ Creates the log directory if it doesn't exist.
 
 The deployment works as follows:
 
-[Flow Diagram](https://github.com/mirasecurity/automation/ansible_automation/flow-chart.png)
+[Flow Diagram](https://github.com/mirasecurity/automation/blob/master/ansible_automation/flow-chart.jpg?raw=true)
 
 
 ## Template for Virtual Machine Deployment KVM
