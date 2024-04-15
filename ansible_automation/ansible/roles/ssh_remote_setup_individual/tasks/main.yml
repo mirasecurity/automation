@@ -1,0 +1,15 @@
+---
+- name: Run command on host
+  expect:
+    echo: yes
+    command: ssh-copy-id -i /root/.ssh/ansible -f {{ hypervisor_username }}@{{ hypervisor_hostname }}
+    responses:
+      '(.*)yes/no/\[fingerprint\]\)?': "yes"
+      "(.*)continue:": "yes"
+      "(.*)assword:": "{{ hypervisor_password }}"
+  vars:
+    ansible_python_interpreter: python3
+  register: output
+
+- debug:
+    var: output

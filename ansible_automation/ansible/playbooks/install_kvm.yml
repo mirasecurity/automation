@@ -1,0 +1,61 @@
+---
+# Setup virtual machine on the hypervisor host.
+#   hypervisor_hostname (str): The hostname or IP address of the hypervisor.
+#   hypervisor_vm_image_loc (str): The location of the image.
+#   hypervisor_dest_directory (str): The destination location of the qcow image.
+#   vm_qcow_name (str): The name of the QCOW file.
+#   vm_vcpus (int): The number of virtual CPUs.
+#   vm_memory (int): The vm_memory size in MB.
+#   vm_os_variant (str): The OS variant.
+#   vm_boot (str): The vm_boot options.
+#   vm_cpu (str): The CPU options.
+#   vm_source (str): The Management Interface.
+#   vm_model (str): The model.
+#   vm_source_mode (str): The source mode.
+#   vm_network_net_a (str): The network bridge for Net A.
+#   vm_network_net_b (str): The network bridge for Net B.
+#   vm_network_app_a (str): The application network bridge for Net A.
+#   vm_network_app_b (str): The application network bridge for Net B.
+#   vm_network_mir_a (str): The mirror network bridge for Net A.
+#   vm_network_mir_b (str): The mirror network bridge for Net B.
+#   vm_username (str): The username for the virtual machine.
+#   vm_hashed_password (str): The hashed password for the virtual machine.
+#   vm_hostname (str): The hostname for the virtual machine.
+#   vm_static_ip_address (str): The static IP address for the virtual machine.
+#   vm_ip_gateway (str): The IP gateway for the virtual machine.
+#   vm_ip_netmask (str): The IP netmask for the virtual machine.
+#   vm_dns_server_1 (str): The primary DNS server for the virtual machine.
+#   vm_dns_server_2 (str): The secondary DNS server for the virtual machine.
+
+# Execute playbook:
+#     ansible-playbook playbooks/install_kvm.yml --extra-vars
+#         "hypervisor_hostname=<hypervisor_hostname>
+#          hypervisor_vm_image_loc=<hypervisor_vm_image_loc>
+#          hypervisor_dest_directory=<hypervisor_dest_directory>
+#          vm_qcow_name=<vm_qcow_name>
+#          vm_vcpus=<vm_vcpus>
+#          vm_memory=<vm_memory>
+#          vm_os_variant=<vm_os_variant>
+#          vm_boot=<vm_boot>
+#          vm_cpu=<vm_cpu>
+#          vm_source=<mgmt-interface>
+#          vm_model=<vm_model>
+#          vm_source_mode=<vm_source_mode>
+#          vm_network_net_a=<vm_network_net_a>
+#          vm_network_net_b=<vm_network_net_b>
+#          vm_network_app_a=<vm_network_app_a>
+#          vm_network_app_b=<vm_network_app_b>
+#          vm_network_mir_a=<vm_network_mir_a>
+#          vm_network_mir_b=<vm_network_mir_b>
+#          vm_username=admin
+#          vm_hashed_password=<vm_hashed_password>
+#          vm_hostname=<vm_hostname>
+#          vm_static_ip_address=<vm_static_ip_address>
+#          vm_ip_gateway=<vm_ip_gateway>
+#          vm_ip_netmask=<vm_ip_netmask>
+#          vm_dns_server_1=<vm_dns_server_1>
+#          vm_dns_server_2=<vm_dns_server_2>"
+
+- hosts: "{{ hypervisor_hostname }}"
+  roles:
+    - build_kvm

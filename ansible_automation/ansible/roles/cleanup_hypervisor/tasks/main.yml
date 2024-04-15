@@ -1,0 +1,76 @@
+---
+# Stop the VM
+- name: Destroy the VM
+  shell: virsh destroy "{{ vm_qcow_name }}"
+  become: True
+  ignore_errors: True
+
+- name: Undefine the VM
+  shell: virsh undefine "{{ vm_qcow_name }}"
+  become: True
+  ignore_errors: True
+
+# Delete the directory the KVM and cloud-init images exist
+- name: Check if directory exists
+  stat:
+    path: "{{ hypervisor_dest_directory }}/{{ vm_qcow_name }}"
+  register: dir_stat
+
+- name: Delete directory if it exists
+  file:
+    path: "{{ hypervisor_dest_directory }}/{{ vm_qcow_name }}"
+    state: absent
+  when: dir_stat.stat.exists
+
+# Cleanup Network configs
+- name: Down bridge connections
+  nmcli:
+    conn_name: "{{ item }}"
+    state: down
+  loop:
+    - "{{ vm_network_net_a }}"
+    - "{{ vm_network_net_b }}"
+    - "{{ vm_network_app_a }}"
+    - "{{ vm_network_app_b }}"
+    - "{{ vm_network_mir_a }}"
+    - "{{ vm_network_mir_b }}"
+  when: ansible_os_family == "RedHat"
+  ignore_errors: True
+
+- name: Remove bridge connections
+  nmcli:
+    conn_name: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ vm_network_net_a }}"
+    - "{{ vm_network_net_b }}"
+    - "{{ vm_network_app_a }}"
+    - "{{ vm_network_app_b }}"
+    - "{{ vm_network_mir_a }}"
+    - "{{ vm_network_mir_b }}"
+  when: ansible_os_family == "RedHat"
+  ignore_errors: True
+
+- name: Remove netplan configuration
+  file:
+    path: "/etc/netplan/01-mira-bridges-{{ vm_qcow_name }}.yaml"
+    state: absent
+  when: ansible_os_family == "Debian"
+  ignore_errors: True
+
+- name: Apply netplan
+  command: netplan apply
+  async: 45
+  poll: 0
+  when: ansible_os_family == "Debian"
+
+- name: Remove temporary bridge IP links
+  shell: ip link delete {{ item }}
+  loop:
+    - "{{ vm_network_net_a }}"
+    - "{{ vm_network_net_b }}"
+    - "{{ vm_network_app_a }}"
+    - "{{ vm_network_app_b }}"
+    - "{{ vm_network_mir_a }}"
+    - "{{ vm_network_mir_b }}"
+  ignore_errors: True

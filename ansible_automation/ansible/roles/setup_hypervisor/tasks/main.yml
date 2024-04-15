@@ -1,0 +1,150 @@
+---
+- name: Install, configure Debian systems
+  block:
+    - name: Install packages
+      apt:
+        name:
+          - qemu-kvm
+          - virt-manager
+          - libvirt-daemon-system
+          - libvirt-clients
+          - bridge-utils
+          - whois
+          - genisoimage
+          - python3-pip
+          - netplan.io
+        state: present
+
+    - name: Template the netplan configuration file
+      template:
+        src: "templates/01-mira-bridges.yaml.j2"
+        dest: "/etc/netplan/01-mira-bridges-{{ vm_qcow_name }}.yaml"
+
+    - name: Apply netplan
+      command: netplan apply
+
+  when: ansible_os_family == "Debian"
+  become: true
+  become_user: root
+  ignore_errors: true
+
+# RHEL Systems
+- name: Install, configure Redhat systems
+  block:
+    - name: Install packages
+      yum:
+        name:
+          - qemu-kvm
+          - libvirt
+          - libvirt-python
+          - libguestfs-tools
+          - virt-install
+          - whois
+          - genisoimage
+          - epel-release
+          - python3-pip
+          - NetworkManager
+        state: present
+
+    - name: Add bridge connection {{ vm_network_net_a }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_net_a }}"
+        ifname: "{{ vm_network_net_a }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_net_a }}
+      nmcli:
+        conn_name: "{{ vm_network_net_a }}"
+        state: up
+
+    - name: Add bridge connection {{ vm_network_net_b }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_net_b }}"
+        ifname: "{{ vm_network_net_b }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_net_b }}
+      nmcli:
+        conn_name: "{{ vm_network_net_b }}"
+        state: up
+
+    - name: Add bridge connection {{ vm_network_app_a }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_app_a }}"
+        ifname: "{{ vm_network_app_a }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_app_a }}
+      nmcli:
+        conn_name: "{{ vm_network_app_a }}"
+        state: up
+
+    - name: Add bridge connection {{ vm_network_app_b }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_app_b }}"
+        ifname: "{{ vm_network_app_b }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_app_b }}
+      nmcli:
+        conn_name: "{{ vm_network_app_b }}"
+        state: up
+
+    - name: Add bridge connection {{ vm_network_mir_a }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_mir_a }}"
+        ifname: "{{ vm_network_mir_a }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_mir_a }}
+      nmcli:
+        conn_name: "{{ vm_network_mir_a }}"
+        state: up
+
+    - name: Add bridge connection {{ vm_network_mir_b }}
+      nmcli:
+        type: bridge
+        conn_name: "{{ vm_network_mir_b }}"
+        ifname: "{{ vm_network_mir_b }}"
+        ipv4.method: disable
+        ipv6.method: ignore
+        stp: false
+        state: present
+
+    - name: Bring up connection {{ vm_network_mir_b }}
+      nmcli:
+        conn_name: "{{ vm_network_mir_b }}"
+        state: up
+    # If external network card interfaces are also to be connected into this bridge, then this can be
+    # added as shown below, in this example enp4s0np0 is connected into br-net-a and eno4 is
+    # connected into br-net-b.
+    # root@kvm-host:~# nmcli connection add type ethernet slave-type bridge
+    # con-name br-net-a-enp4s0np0 ifname enp4s0np0 master br-net-a
+    # root@kvm-host:~# nmcli connection add type ethernet slave-type bridge
+    # con-name br-net-b-eno4 ifname eno4 master br-net-b
+    # Activate all network manager connections that have been created.
+
+  when: ansible_os_family == "RedHat"
+  become: true
+  become_user: root
+  ignore_errors: true

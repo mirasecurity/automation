@@ -1,0 +1,30 @@
+# /etc/netplan/01-mira-bridges.yaml
+# Base bridge example
+network:
+  version: 2
+  renderer: networkd
+  bridges:
+    {{ vm_network_net_a }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500
+    {{ vm_network_net_b }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500
+    {{ vm_network_app_a }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500
+    {{ vm_network_app_b }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500
+    {{ vm_network_mir_a }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500
+    {{ vm_network_mir_b }}:
+      dhcp4: no
+      dhcp6: no
+      mtu: 1500

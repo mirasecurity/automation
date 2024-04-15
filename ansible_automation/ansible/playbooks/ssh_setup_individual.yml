@@ -1,0 +1,13 @@
+---
+# Forces ssh-copy-id to any machine, even if the machine is not in your inventory.
+#   user: The user of the machine (i.e. root)
+#   hypervisor_hostname: The hostname/ip of the machine
+#   password: The password of the machine itself
+
+# Execute playbook:
+#   ansible-playbook playbooks/ssh_setup_individual.yml --extra-vars "user=<user> hypervisor_hostname=<hostname> password=<password>"
+- name: "Install ssh keys on remote machine"
+  hosts: localhost
+  connection: local
+  roles:
+    - ssh_remote_setup_individual
