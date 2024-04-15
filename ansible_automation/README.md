@@ -63,7 +63,7 @@ Creates the log directory if it doesn't exist.
 
 The deployment works as follows:
 
-[Flow Diagram](https://github.com/mirasecurity/automation/ansible_automation/flow-chart.png)
+[Flow Diagram](https://github.com/mirasecurity/automation/blob/master/ansible_automation/flow-chart.jpg?raw=true)
 
 
 ## Template for Virtual Machine Deployment KVM
@@ -109,7 +109,7 @@ Note: Fields marked as (Optional) are not mandatory for deployment but may be re
 
 ## ETO Setup via API
 
-"The `deploy.py` file also changes the default password for the 'admin' user for the ETO API. Additionally, the `setup_eto.py` file is responsible for modifying default settings and can be utilized independently. If `vm_static_ip_address` is specified in the `<config>.json` file, along with `vm_ip_netmask`, `vm_ip_gateway`, and `vm_allow_enrollment`, then the enrollment state for the ETO can be altered. Otherwise, the default API settings will remain unchanged.
+The `deploy.py` file also changes the default password for the 'admin' user for the ETO API. Additionally, the `setup_eto.py` file is responsible for modifying default settings and can be utilized independently. If `vm_static_ip_address` is specified in the `<config>.json` file, along with `vm_ip_netmask`, `vm_ip_gateway`, and `vm_allow_enrollment`, then the enrollment state for the ETO can be altered. Otherwise, the default API settings will remain unchanged.
 
 The script can be executed independently with the following command:
 
