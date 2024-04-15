@@ -13,8 +13,6 @@ jobs:
       - uses: actions/setup-python@v3
       - name: Install dependencies
         run: |
-          pip install setuptools
-          pip install pyyaml
           pip install -r ./ansible_automation/docs/requirements.txt
       - name: Sphinx build
         run: |
