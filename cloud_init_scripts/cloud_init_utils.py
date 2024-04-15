@@ -3,15 +3,15 @@ import os
 import subprocess
 
 
-def generate_cloud_init_files(user, hashed_user_password, cloud_init_user_data_directory, cloud_init_meta_data_directory, vm_hostname, vm_static_ip_address=None, vm_ip_gateway=None, vm_ip_netmask=None, vm_dns_server_1=None, vm_dns_server_2=None):
+def generate_cloud_init_files(vm_username, vm_hashed_password, cloud_init_user_data_directory, cloud_init_meta_data_directory, vm_hostname, vm_static_ip_address=None, vm_ip_gateway=None, vm_ip_netmask=None, vm_dns_server_1=None, vm_dns_server_2=None):
     """
     Generate cloud-init scripts for configuring a virtual machine.
 
     Parameters
     ----------
-    user : str
+    vm_username : str
         The username for the virtual machine.
-    hashed_user_password : str
+    vm_hashed_password : str
         The hashed password for the virtual machine user.
     cloud_init_user_data_directory : str
         The path to the output file for cloud-init user data.
@@ -48,12 +48,10 @@ chpasswd: {{expire: False}}
 ssh_pwauth: True
 runcmd:
 - hostnamectl set-hostname {}
-'''.format(user, hashed_user_password, vm_hostname)
+'''.format(vm_username, vm_hashed_password, vm_hostname)
 
     if vm_static_ip_address:
         cloud_init_user_data_template += "- set -x; sed -i -e 's/BOOTPROTO=\"dhcp\"/BOOTPROTO=\"static\"/g' /etc/sysconfig/network-scripts/ifcfg-eth0\n"
-
-    if vm_static_ip_address:
         cloud_init_user_data_template += f"- set -x; echo 'IPADDR={vm_static_ip_address}' >> /etc/sysconfig/network-scripts/ifcfg-eth0\n"
 
     if vm_ip_gateway:
@@ -128,10 +126,10 @@ def setup_arg_parser():
         'generate_cloud_init_iso', help='Generate cloud-init scripts',
     )
     parser_generate_cloud_init_iso.add_argument(
-        '--user', required=True, help='Username for the virtual machine',
+        '--vm_username', required=True, help='Username for the virtual machine',
     )
     parser_generate_cloud_init_iso.add_argument(
-        '--hashed_user_password', required=True, help='Hashed password for the virtual machine user',
+        '--vm_hashed_password', required=True, help='Hashed password for the virtual machine user',
     )
     parser_generate_cloud_init_iso.add_argument(
         '--cloud_init_user_data_directory', required=False, default='.', help='Directory the user-data file will be created',
@@ -157,7 +155,6 @@ def setup_arg_parser():
     parser_generate_cloud_init_iso.add_argument(
         '--vm_dns_server_2', help='Secondary DNS server for the virtual machine',
     )
-
     parser_generate_cloud_init_iso.add_argument(
         '--cloud_init_iso_name', required=True, help='Name of the cloud-init ISO image to generate',
     )
@@ -179,7 +176,7 @@ if __name__ == '__main__':
         )
 
         generate_cloud_init_files(
-            args.user, args.hashed_user_password,
+            args.vm_username, args.vm_hashed_password,
             user_data_directory,
             meta_data_directory,
             args.vm_hostname,

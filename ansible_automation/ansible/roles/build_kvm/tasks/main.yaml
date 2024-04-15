@@ -1,0 +1,35 @@
+---
+- name: Make sure kvm is enabled
+  shell: systemctl enable libvirtd
+
+- name: Make sure kvm is started
+  shell: systemctl start libvirtd
+
+- name: Install requests
+  pip:
+    name: requests
+  vars:
+    ansible_python_interpreter: python3
+
+- name: Copy the required scripts to the machine
+  copy:
+    src: ../files/
+    dest: ~/virsh_builds/
+
+- name: Run python script to start the setup
+  command: "python3 setup_kvm.py --hypervisor_vm_image_loc {{ hypervisor_vm_image_loc }} --hypervisor_dest_directory {{ hypervisor_dest_directory }} --vm_qcow_name {{ vm_qcow_name }} --vm_vcpus {{vm_vcpus}} --vm_memory {{vm_memory}} --vm_os_variant {{vm_os_variant}} --vm_boot {{vm_boot}} --vm_cpu {{vm_cpu}} --vm_source {{vm_source}} --vm_model {{vm_model}} --vm_source_mode {{vm_source_mode}} --vm_network_net_a {{vm_network_net_a}} --vm_network_net_b {{vm_network_net_b}} --vm_network_app_a {{vm_network_app_a}} --vm_network_app_b {{vm_network_app_b}} --vm_network_mir_a {{vm_network_mir_a}} --vm_network_mir_b {{vm_network_mir_b}} --vm_username {{vm_username}} --vm_hashed_password {{vm_hashed_password}} --vm_hostname {{vm_hostname}} --vm_static_ip_address {{vm_static_ip_address}} --vm_ip_gateway {{vm_ip_gateway}} --vm_ip_netmask {{vm_ip_netmask}} --vm_dns_server_1 {{vm_dns_server_1}} --vm_dns_server_2 {{vm_dns_server_2}}"
+  args:
+    chdir: ~/virsh_builds/
+  register: output
+
+- debug:
+    var: output
+
+- name: Delete the virsh_builds folder
+  file:
+    path: ~/virsh_builds
+    state: absent
+
+- name: When it is done installing we wait for it
+  ansible.builtin.pause:
+    minutes: 5

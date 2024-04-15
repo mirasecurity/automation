@@ -1,0 +1,26 @@
+---
+# Remove the network configurations on of a previous vETO install on the hypervisor.
+#   hypervisor_hostname (str): The hostname/ip of the machine.
+#   hypervisor_dest_directory (str): The destination location of the qcow image.
+#   vm_network_net_a (str): The network bridge for Net A.
+#   vm_network_net_b (str): The network bridge for Net B.
+#   vm_network_app_a (str): The application network bridge for Net A.
+#   vm_network_app_b (str): The application network bridge for Net B.
+#   vm_network_mir_a (str): The mirror network bridge for Net A.
+#   vm_network_mir_b (str): The mirror network bridge for Net B.
+#   vm_qcow_name (str): The name of the qcow file
+
+# Execute playbook:
+#   ansible-playbook playbooks/cleanup.yml --extra-vars "hypervisor_hostname=<hostname>
+#       vm_network_net_a=<vm_network_net_a>
+#       vm_network_net_b=<vm_network_net_b>
+#       vm_network_app_a=<vm_network_app_a>
+#       vm_network_app_b=<vm_network_app_b>
+#       vm_network_mir_a=<vm_network_mir_a>
+#       vm_network_mir_b=<vm_network_mir_b>
+#       vm_qcow_name=<vm_qcow_name>"
+
+- name: "Remove the vETO and associated files and clean network configs"
+  hosts: "{{ hypervisor_hostname }}"
+  roles:
+    - cleanup_hypervisor

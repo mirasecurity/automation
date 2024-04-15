@@ -1,6 +1,6 @@
-*.txt
 __pycache__
 logs/*
 .vscode
 tests/
 *.log
+ssh-keys/
