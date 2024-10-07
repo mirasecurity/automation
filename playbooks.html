@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ansible Playbooks &mdash; Virtual Machine Deployment 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=8d563738"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Deployment" href="code/deploy.html" />
+    <link rel="prev" title="VM Deployment Automation" href="setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Virtual Machine Deployment
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="setup.html">VM Deployment Automation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Ansible Playbooks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install-kvm">install_kvm</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#variables">Variables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#note">Note</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#install-requirements-playbook">Install Requirements Playbook</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#playbook-structure">Playbook Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Note</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#ssh-setup-individual">ssh_setup_individual</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Playbook Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Note</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cleanup-hypervisor">cleanup_hypervisor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id6">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">Playbook Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id8">Note</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="code/deploy.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/setup_eto.html">Setup ETO Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/ansible.html">How Deployment Happens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/cleanup.html">Cleanup</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Virtual Machine Deployment</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Ansible Playbooks</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/playbooks.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ansible-playbooks">
+<h1>Ansible Playbooks<a class="headerlink" href="#ansible-playbooks" title="Link to this heading"></a></h1>
+<section id="install-kvm">
+<h2>install_kvm<a class="headerlink" href="#install-kvm" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">install_kvm.yml</span></code> is an Ansible playbook designed to install a specified virtual machine (VM) KVM image on a remote host. This playbook provides the following functionality:</p>
+<ul class="simple">
+<li><p><strong>Installation from URL or Local File:</strong> Supports installation from either a URL or a file present on the local system.</p></li>
+<li><p><strong>Image Extraction and Naming:</strong> Automatically extracts the image and renames it to the domain name provided for the VM.</p></li>
+<li><p><strong>Automatic Link Creation:</strong> Automatically creates links for the machine, ensuring seamless integration and accessibility.</p></li>
+</ul>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h3>
+<p>Ensure you have Ansible installed and configured properly before running this playbook.</p>
+<p>Run the playbook using the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ansible-playbook<span class="w"> </span>playbooks/install_kvm.yml<span class="w"> </span>--extra-vars<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="s2">&quot;hypervisor_hostname=&lt;hypervisor_hostname&gt; \</span>
+<span class="s2">     hypervisor_vm_image_loc=&lt;hypervisor_vm_image_loc&gt; \</span>
+<span class="s2">     hypervisor_dest_directory=&lt;hypervisor_dest_directory&gt; \</span>
+<span class="s2">     vm_qcow_name=&lt;vm_qcow_name&gt; \</span>
+<span class="s2">     vm_vcpus=&lt;vm_vcpus&gt; \</span>
+<span class="s2">     vm_memory=&lt;vm_memory&gt; \</span>
+<span class="s2">     vm_os_variant=&lt;os_variant&gt; \</span>
+<span class="s2">     vm_boot=&lt;vm_boot&gt; \</span>
+<span class="s2">     vm_cpu=&lt;vm_cpu&gt; \</span>
+<span class="s2">     vm_source=&lt;vm_source&gt; \</span>
+<span class="s2">     vm_model=&lt;vm_model&gt; \</span>
+<span class="s2">     vm_source_mode=&lt;vm_source_mode&gt; \</span>
+<span class="s2">     vm_network_net_a=&lt;vm_network_net_a&gt; \</span>
+<span class="s2">     vm_network_net_b=&lt;vm_network_net_b&gt; \</span>
+<span class="s2">     vm_network_app_a=&lt;vm_network_app_a&gt; \</span>
+<span class="s2">     vm_network_app_b=&lt;vm_network_app_b&gt; \</span>
+<span class="s2">     vm_network_mir_a=&lt;vm_network_mir_a&gt; \</span>
+<span class="s2">     vm_network_mir_b=&lt;vm_network_mir_b&gt; \</span>
+<span class="s2">     vm_username=&lt;vm_username&gt; \</span>
+<span class="s2">     vm_hashed_password=&lt;vm_hashed_password&gt; \</span>
+<span class="s2">     vm_hostname=&lt;vm_hostname&gt; \</span>
+<span class="s2">     vm_static_ip_address=&lt;vm_static_ip_address&gt; \</span>
+<span class="s2">     vm_ip_gateway=&lt;vm_ip_gateway&gt; \</span>
+<span class="s2">     vm_ip_netmask=&lt;vm_ip_netmask&gt; \</span>
+<span class="s2">     vm_dns_server_1=&lt;vm_dns_server_1&gt; \</span>
+<span class="s2">     vm_dns_server_2=&lt;vm_dns_server_2&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Replace the placeholders with appropriate values for your environment.</p>
+</section>
+<section id="variables">
+<h3>Variables<a class="headerlink" href="#variables" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>hypervisor_hostname</strong> (Required): The hostname of the hypervisor.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">hypervisor_hostname:</span> <span class="pre">&quot;192.168.1.100&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>hypervisor_username</strong> (Required): Username for accessing the hypervisor.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">hypervisor_username:</span> <span class="pre">&quot;admin&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>hypervisor_password</strong> (Required): Password for accessing the hypervisor.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">hypervisor_password:</span> <span class="pre">&quot;password123&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>hypervisor_vm_image_loc</strong> (Required): Location of the image on the machine or URL.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">hypervisor_vm_image_loc:</span> <span class="pre">&quot;/path/to/image.qcow2&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>hypervisor_dest_directory</strong> (Required): Destination location for storing the image.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">hypervisor_dest_directory:</span> <span class="pre">&quot;/var/lib/libvirt/images&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_qcow_name</strong> (Required): Name of the QCOW image.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_qcow_name:</span> <span class="pre">&quot;myimage&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_vcpus</strong> (Optional): Number of virtual CPUs. (Default: 8)</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_vcpus:</span> <span class="pre">4</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_memory</strong> (Optional): Amount of vm_memory in MB. (Default: 16384)</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_memory:</span> <span class="pre">8192</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_os_variant</strong> (Optional): OS variant (Default: centos7.0).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_os_variant:</span> <span class="pre">&quot;centos7.0&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_boot</strong> (Optional): Boot options (Default: hd,cdrom).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_boot:</span> <span class="pre">&quot;cdrom,hd&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_cpu</strong> (Optional): CPU model (Default: host).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">cpu:</span> <span class="pre">&quot;host&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_source</strong> (Optional): Network vm_source (Default: eno0).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_source:</span> <span class="pre">&quot;eth0&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_model</strong> (Optional): Network model (Default: virtio).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">model:</span> <span class="pre">&quot;virtio&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_source_mode</strong> (Optional): Source mode (Default: bridge).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_source_mode:</span> <span class="pre">&quot;nat&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_net_a</strong> (Required): Network configuration for net-a.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_net_a:</span> <span class="pre">&quot;net-a&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_net_b</strong> (Required): Network configuration for net-b.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_net_b:</span> <span class="pre">&quot;net-b&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_app_a</strong> (Required): Network configuration for app-a.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_app_a:</span> <span class="pre">&quot;app-a&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_app_b</strong> (Required): Network configuration for app-b.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_app_b:</span> <span class="pre">&quot;app-b&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_mir_a</strong> (Required): Network configuration for mir-a.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_mir_a:</span> <span class="pre">&quot;mir-a&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_network_mir_b</strong> (Required): Network configuration for mir-b.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_network_mir_b:</span> <span class="pre">&quot;mir-b&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_username</strong> (Required): Username for accessing the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_username:</span> <span class="pre">&quot;user&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_password</strong> (Required): Password for accessing the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_password:</span> <span class="pre">&quot;vmPassword123&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_old_password</strong> (Required): Old password for the virtual machine (if applicable).</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_old_password:</span> <span class="pre">&quot;oldPassword456&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_hostname</strong> (Required): Hostname of the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_hostname:</span> <span class="pre">&quot;myvm&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_static_ip_address</strong> (Optional): Static IP address for the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_static_ip_address:</span> <span class="pre">&quot;192.168.1.50&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_ip_netmask</strong> (Optional): Subnet mask for the virtual machine’s IP address.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_ip_netmask:</span> <span class="pre">&quot;255.255.255.0&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_ip_gateway</strong> (Optional): Gateway IP address for the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_ip_gateway:</span> <span class="pre">&quot;192.168.1.1&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_dns_server_1</strong> (Optional): Primary DNS server for the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_dns_server_1:</span> <span class="pre">&quot;8.8.8.8&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_dns_server_2</strong> (Optional): Secondary DNS server for the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_dns_server_2:</span> <span class="pre">&quot;8.8.4.4&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>vm_api_username</strong> (Optional): API username for the virtual machine.</dt><dd><p>Example: <code class="docutils literal notranslate"><span class="pre">vm_api_username:</span> <span class="pre">&quot;api_user&quot;</span></code></p>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+<section id="note">
+<h3>Note<a class="headerlink" href="#note" title="Link to this heading"></a></h3>
+<p>Ensure that all required variables are correctly specified for successful execution of the playbook.</p>
+</section>
+</section>
+<section id="install-requirements-playbook">
+<h2>Install Requirements Playbook<a class="headerlink" href="#install-requirements-playbook" title="Link to this heading"></a></h2>
+<p>This Ansible playbook is designed to install required packages on a remote system, <em>provided that the hypervisor has access to the internet and is not just accessible via SSH</em>. It simplifies the process of setting up necessary dependencies for various tasks.</p>
+<section id="id1">
+<h3>Usage<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>Ensure you have Ansible installed and configured properly before running this playbook.</p>
+<p>Run the playbook using the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ansible-playbook<span class="w"> </span>playbooks/setup.yml<span class="w"> </span>--extra-vars<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="s2">&quot;hypervisor_hostname=&lt;hostname&gt; /</span>
+<span class="s2">     vm_network_net_a=&lt;vm_network_net_a&gt; /</span>
+<span class="s2">     vm_network_net_b=&lt;vm_network_net_b&gt; /</span>
+<span class="s2">     vm_network_app_a=&lt;vm_network_app_a&gt; /</span>
+<span class="s2">     vm_network_app_b=&lt;vm_network_app_b&gt; /</span>
+<span class="s2">     vm_network_mir_a=&lt;vm_network_mir_a&gt; /</span>
+<span class="s2">     vm_network_mir_b=&lt;vm_network_mir_b&gt; /</span>
+<span class="s2">     vm_qcow_name=&lt;vm_qcow_name&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">&lt;hostname&gt;</span></code> with the hostname or IP address of the hypervisor where you want to install the required packages needed to run the KVM.</p>
+</section>
+<section id="playbook-structure">
+<h3>Playbook Structure<a class="headerlink" href="#playbook-structure" title="Link to this heading"></a></h3>
+<p>The playbook consists of the following structure:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">hosts</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">hypervisor_hostname</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<span class="w">  </span><span class="nt">roles</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">setup_hypervisor</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">hosts</span></code>: Specifies the hypervisor_hostname machine(s) where the playbook will be executed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">roles</span></code>: Defines the roles to be applied to the hypervisor_hostname machine(s). The role works for both Red Hat and Debian-based systems.</p></li>
+</ul>
+</section>
+<section id="id2">
+<h3>Note<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<p>Ensure that the hypervisor_hostname machine(s) are accessible and properly configured to run Ansible playbooks. Additionally, ensure that the necessary roles (<code class="docutils literal notranslate"><span class="pre">setup_hypervisor</span></code>) are available and correctly configured for the playbook execution.</p>
+<p>The ansible scripts creates temporary linux bridges using the ip link command as a backup. Netplan (Ubuntu) or Network Manager (RHEL) is used to setup the network bridges, more complex setups can be made, but a basic implementation is available in the playbooks.</p>
+</section>
+</section>
+<section id="ssh-setup-individual">
+<h2>ssh_setup_individual<a class="headerlink" href="#ssh-setup-individual" title="Link to this heading"></a></h2>
+<p>This Ansible playbook facilitates the installation of SSH keys on a remote machine, enabling seamless authentication without the need for password input. It allows you to force the SSH key copy to any machine, even if the machine is not in your inventory.</p>
+<section id="id3">
+<h3>Usage<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<p>Ensure you have Ansible installed and configured properly before running this playbook.</p>
+<p>Run the playbook using the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ansible-playbook<span class="w"> </span>playbooks/ssh_setup_individual.yml<span class="w"> </span>--extra-vars<span class="w"> </span><span class="s2">&quot;hypervisor_username=&lt;hypervisor_username&gt; hypervisor_hostname=&lt;hypervisor_hostname&gt; hypervisor_password=&lt;hypervisor_password&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Replace <code class="docutils literal notranslate"><span class="pre">&lt;hypervisor_username&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;hypervisor_hostname&gt;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&lt;hypervisor_password&gt;</span></code> with appropriate values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervisor_username</span></code>: The user of the remote machine (e.g., root).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervisor_hostname</span></code>: The hostname or IP address of the remote machine.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervisor_password</span></code>: The password of the remote machine itself.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Playbook Structure<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<p>The playbook consists of the following structure:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Install</span><span class="nv"> </span><span class="s">ssh</span><span class="nv"> </span><span class="s">keys</span><span class="nv"> </span><span class="s">on</span><span class="nv"> </span><span class="s">remote</span><span class="nv"> </span><span class="s">machine&quot;</span>
+<span class="w">  </span><span class="nt">hosts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">localhost</span>
+<span class="w">  </span><span class="nt">connection</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
+<span class="w">  </span><span class="nt">roles</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ssh_remote_setup_individual</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: Descriptive name for the playbook task.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hosts</span></code>: Specifies the hypervisor_hostname hosts where the playbook will be executed. In this case, it’s set to <code class="docutils literal notranslate"><span class="pre">localhost</span></code> since the SSH key setup is performed locally.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">connection</span></code>: Specifies the connection type. Here, it’s set to <code class="docutils literal notranslate"><span class="pre">local</span></code> to ensure the SSH key setup is performed locally.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">roles</span></code>: Defines the roles to be applied. The <code class="docutils literal notranslate"><span class="pre">ssh_remote_setup_individual</span></code> role is responsible for setting up SSH keys on the remote machine.</p></li>
+</ul>
+</section>
+<section id="id5">
+<h3>Note<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<p>Ensure that the necessary SSH keys are available and properly configured for successful execution of the playbook. Additionally, ensure that the hypervisor_hostname machine is accessible and correctly configured to accept SSH connections.</p>
+</section>
+</section>
+<section id="cleanup-hypervisor">
+<h2>cleanup_hypervisor<a class="headerlink" href="#cleanup-hypervisor" title="Link to this heading"></a></h2>
+<p>This Ansible playbook has the task of removing the deployed vETO based on the configuration used in install_kvm playbook. The playbook also removes the network bridges that were setup via Network Manager(Redhat) or Netplan(Ubuntu).</p>
+<section id="id6">
+<h3>Usage<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<p>Ensure you have Ansible installed and configured properly before running this playbook.</p>
+<p>Run the playbook using the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ansible-playbook<span class="w"> </span>playbooks/cleanup.yml<span class="w"> </span>--extra-vars<span class="w"> </span><span class="s2">&quot;\</span>
+<span class="s2">    hypervisor_hostname=&lt;hypervisor_hostname&gt; \</span>
+<span class="s2">    hypervisor_dest_directory=&lt;hypervisor_dest_directory&gt; \</span>
+<span class="s2">    vm_qcow_name=&lt;vm_qcow_name&gt; \</span>
+<span class="s2">    vm_network_net_a=&lt;vm_network_net_a&gt; \</span>
+<span class="s2">    vm_network_net_b=&lt;vm_network_net_b&gt; \</span>
+<span class="s2">    vm_network_app_a=&lt;vm_network_app_a&gt; \</span>
+<span class="s2">    vm_network_app_b=&lt;vm_network_app_b&gt; \</span>
+<span class="s2">    vm_network_mir_a=&lt;vm_network_mir_a&gt; \</span>
+<span class="s2">    vm_network_mir_b=&lt;vm_network_mir_b&gt; \</span>
+<span class="s2">    &quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>Playbook Structure<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<p>The playbook consists of the following structure:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Remove</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">vETO</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">associated</span><span class="nv"> </span><span class="s">files</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">clean</span><span class="nv"> </span><span class="s">network</span><span class="nv"> </span><span class="s">configs&quot;</span>
+<span class="w">  </span><span class="nt">hosts</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">hypervisor_hostname</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<span class="w">  </span><span class="nt">roles</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cleanup_hypervisor</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: Descriptive name for the playbook task.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hosts</span></code>: Specifies the hypervisor_hostname machine(s) where the playbook will be executed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">roles</span></code>: Defines the roles to be applied. The <code class="docutils literal notranslate"><span class="pre">cleanup_hypervisor</span></code> role is responsible for stopping and deleting the virtual machine, along with its associated networking setup.</p></li>
+</ul>
+</section>
+<section id="id8">
+<h3>Note<a class="headerlink" href="#id8" title="Link to this heading"></a></h3>
+<p>Ensure that the hypervisor_hostname machine(s) are accessible and properly configured to run Ansible playbooks.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="setup.html" class="btn btn-neutral float-left" title="VM Deployment Automation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="code/deploy.html" class="btn btn-neutral float-right" title="Deployment" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mira Security.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

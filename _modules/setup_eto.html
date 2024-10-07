@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>setup_eto &mdash; Virtual Machine Deployment 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=8d563738"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Virtual Machine Deployment
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">VM Deployment Automation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../playbooks.html">Ansible Playbooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/deploy.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/setup_eto.html">Setup ETO Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/ansible.html">How Deployment Happens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/cleanup.html">Cleanup</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Virtual Machine Deployment</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">setup_eto</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for setup_eto</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">urllib3</span>
+<span class="kn">from</span> <span class="nn">bravado.client</span> <span class="kn">import</span> <span class="n">SwaggerClient</span>
+<span class="kn">from</span> <span class="nn">bravado.client</span> <span class="kn">import</span> <span class="n">SwaggerFormat</span>
+<span class="kn">from</span> <span class="nn">bravado.requests_client</span> <span class="kn">import</span> <span class="n">RequestsClient</span>
+
+
+<div class="viewcode-block" id="connect">
+<a class="viewcode-back" href="../code/setup_eto.html#setup_eto.connect">[docs]</a>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">server_url</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">new_password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ssl_verify</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Connect to a server and return a SwaggerClient instance.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    server_url : str</span>
+<span class="sd">        The URL of the server to connect to.</span>
+<span class="sd">    username : str, optional</span>
+<span class="sd">        The username for authentication (default is None).</span>
+<span class="sd">    password : str, optional</span>
+<span class="sd">        The password for authentication (default is None).</span>
+<span class="sd">    new_password : str, optional</span>
+<span class="sd">        The new password to set (default is None).</span>
+<span class="sd">    ssl_verify : bool, optional</span>
+<span class="sd">        Whether to verify SSL certificates (default is True).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    swagger_client : SwaggerClient</span>
+<span class="sd">        A SwaggerClient instance connected to the specified server.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function connects to a server using the provided `server_url`. If `ssl_verify` is set to False,</span>
+<span class="sd">    SSL certificate verification is disabled. The function initializes a SwaggerClient instance with</span>
+<span class="sd">    customized configurations and returns it. If `username` and `password` are provided, authentication</span>
+<span class="sd">    is performed using the provided credentials. If `new_password` is provided, it is used for changing</span>
+<span class="sd">    the password. The resulting SwaggerClient instance is returned.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ssl_verify</span><span class="p">:</span>
+        <span class="n">urllib3</span><span class="o">.</span><span class="n">disable_warnings</span><span class="p">(</span><span class="n">urllib3</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">InsecureRequestWarning</span><span class="p">)</span>
+
+    <span class="n">http_client</span> <span class="o">=</span> <span class="n">RequestsClient</span><span class="p">(</span><span class="n">ssl_verify</span><span class="o">=</span><span class="n">ssl_verify</span><span class="p">)</span>
+    <span class="n">swagger_client</span> <span class="o">=</span> <span class="n">SwaggerClient</span><span class="o">.</span><span class="n">from_url</span><span class="p">(</span>
+        <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/swagger.json&#39;</span> <span class="o">%</span> <span class="n">server_url</span><span class="p">,</span>
+        <span class="n">http_client</span><span class="o">=</span><span class="n">http_client</span><span class="p">,</span>
+        <span class="n">config</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">&#39;validate_responses&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;validate_requests&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s1">&#39;validate_swagger_spec&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;use_models&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s1">&#39;formats&#39;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">SwaggerFormat</span><span class="p">(</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;uri&#39;</span><span class="p">,</span>
+                    <span class="n">to_wire</span><span class="o">=</span><span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">b</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">),</span>
+                    <span class="n">to_python</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Converts [wire]string:byte &lt;=&gt; python byte&#39;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">SwaggerFormat</span><span class="p">(</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;email&#39;</span><span class="p">,</span>
+                    <span class="n">to_wire</span><span class="o">=</span><span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">b</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">),</span>
+                    <span class="n">to_python</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Converts [wire]string:byte &lt;=&gt; python byte&#39;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">SwaggerFormat</span><span class="p">(</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ipv4&#39;</span><span class="p">,</span>
+                    <span class="n">to_wire</span><span class="o">=</span><span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">b</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">),</span>
+                    <span class="n">to_python</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Converts [wire]string:byte &lt;=&gt; python byte&#39;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">SwaggerFormat</span><span class="p">(</span>
+                    <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;ipv6&#39;</span><span class="p">,</span>
+                    <span class="n">to_wire</span><span class="o">=</span><span class="k">lambda</span> <span class="n">b</span><span class="p">:</span> <span class="n">b</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">),</span>
+                    <span class="n">to_python</span><span class="o">=</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+                    <span class="n">validate</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Converts [wire]string:byte &lt;=&gt; python byte&#39;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">username</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">password</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">swagger_client</span><span class="o">.</span><span class="n">auth</span><span class="o">.</span><span class="n">auth_login_create</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">swagger_client</span><span class="o">.</span><span class="n">get_model</span><span class="p">(</span><span class="s1">&#39;Login&#39;</span><span class="p">)(</span>
+                <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span> <span class="n">new_password</span><span class="o">=</span><span class="n">new_password</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">response</span><span class="p">()</span><span class="o">.</span><span class="n">result</span>
+    <span class="n">swagger_client</span><span class="o">.</span><span class="n">server_url</span> <span class="o">=</span> <span class="n">server_url</span>
+    <span class="k">return</span> <span class="n">swagger_client</span></div>
+
+
+
+<div class="viewcode-block" id="setup_eto_with_retry">
+<a class="viewcode-back" href="../code/setup_eto.html#setup_eto.setup_eto_with_retry">[docs]</a>
+<span class="k">def</span> <span class="nf">setup_eto_with_retry</span><span class="p">(</span><span class="n">hostname</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">old_password</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">allow_enrollment</span><span class="p">,</span> <span class="n">max_retries</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">retry_delay</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Setup ETO (Encrypted Traffic Orchestrator) and change it&#39;s enrollment state to allow.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hostname : str</span>
+<span class="sd">        The hostname of the server.</span>
+<span class="sd">    username : str</span>
+<span class="sd">        The username for authentication.</span>
+<span class="sd">    old_password : str</span>
+<span class="sd">        The old password for authentication.</span>
+<span class="sd">    password : str</span>
+<span class="sd">        The new password for authentication.</span>
+<span class="sd">    max_retries : int, optional</span>
+<span class="sd">        The maximum number of retries in case of failure. Default is 30.</span>
+<span class="sd">    retry_delay : int, optional</span>
+<span class="sd">        The delay (in seconds) between retries. Default is 5.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    SystemError</span>
+<span class="sd">        If the maximum number of retries is reached without success.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">attempt</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_retries</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Changing password from old to new for initial login</span>
+                <span class="n">client</span> <span class="o">=</span> <span class="n">connect</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;https://</span><span class="si">{</span><span class="n">hostname</span><span class="si">}</span><span class="s1">/api&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">old_password</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not establish a connection </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="c1"># Enable enrollment on the ETO</span>
+            <span class="k">if</span> <span class="n">allow_enrollment</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">system_enrollment_enroll_update</span><span class="p">(</span>
+                        <span class="n">data</span><span class="o">=</span><span class="p">{</span>
+                            <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;allow&#39;</span><span class="p">,</span>
+                        <span class="p">},</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">response</span><span class="p">()</span><span class="o">.</span><span class="n">result</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not change enrollment state </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span><span class="p">)</span>
+            <span class="c1"># If the above steps succeed, break out of the loop</span>
+            <span class="k">break</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Attempt </span><span class="si">{</span><span class="n">attempt</span><span class="si">}</span><span class="s1"> failed: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">attempt</span> <span class="o">&lt;</span> <span class="n">max_retries</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Retrying in </span><span class="si">{</span><span class="n">retry_delay</span><span class="si">}</span><span class="s1"> seconds...&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">retry_delay</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max retries reached. Exiting.&#39;</span><span class="p">)</span>
+                <span class="ne">SystemError</span><span class="p">(</span><span class="s1">&#39;Max retries reached. Exiting.&#39;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Setup ETO&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--ip&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;IPv4 address of the server&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--username&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Username for authentication&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--old_password&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Old password for authentication&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--password&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;New password for authentication&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--allow-enrollment&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Enable enrollment for ETO&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">setup_eto_with_retry</span><span class="p">(</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">old_password</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">password</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">allow_enrollment</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mira Security.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
