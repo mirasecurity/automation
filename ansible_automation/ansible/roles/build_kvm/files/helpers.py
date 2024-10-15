@@ -3,6 +3,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 from urllib.parse import urlparse
+from ipaddress import IPv4Network
 
 import requests
 
@@ -107,7 +108,19 @@ def download_extract_and_rename_qcow2(url_or_file, extract_path, new_qcow_file=N
     return (qcow2_file if qcow2_file is not None else None, Path(extract_path), file_path)
 
 
-def generate_cloud_init_files(vm_username, vm_hashed_password, cloud_init_user_data_output, cloud_init_meta_data_output, vm_hostname, vm_static_ip_address=None, vm_ip_gateway=None, vm_ip_netmask=None, vm_dns_server_1=None, vm_dns_server_2=None):
+def generate_cloud_init_files(
+        vm_username,
+        vm_hashed_password,
+        cloud_init_user_data_output,
+        cloud_init_meta_data_output,
+        vm_hostname,
+        vm_static_ip_address=None,
+        vm_ip_gateway=None,
+        vm_ip_netmask=None,
+        vm_dns_server_1=None,
+        vm_dns_server_2=None,
+        vm_nameserver=None,
+    ):
     """
     Generate cloud-init scripts for configuring a virtual machine.
 
@@ -129,10 +142,14 @@ def generate_cloud_init_files(vm_username, vm_hashed_password, cloud_init_user_d
         The IP gateway for the virtual machine (default is None).
     vm_ip_netmask : str, optional
         The IP netmask for the virtual machine (default is None).
+        Supports dotted-decimal (eg. '255.255.255.255') and CIDR (eg. '/32') notations.
     vm_dns_server_1 : str, optional
         The primary DNS server for the virtual machine (default is None).
     vm_dns_server_2 : str, optional
         The secondary DNS server for the virtual machine (default is None).
+    vm_nameserver: str, optional
+        The nameserver for the virtual machine (default is None).
+        Multiple can be specified comma-seperated.
 
     Returns
     -------
@@ -145,6 +162,16 @@ def generate_cloud_init_files(vm_username, vm_hashed_password, cloud_init_user_d
     settings. The generated user data template is written to the specified `cloud_init_user_data_output` file,
     while the metadata template containing only the hostname is written to the `cloud_init_meta_data_output` file.
     """
+    # Convert netmask to CIDR notation for nmcli
+    if vm_ip_netmask is not None:
+        netmask_len = len(vm_ip_netmask.split('.'))
+        if netmask_len == 1 and len(vm_ip_netmask.split('/')) == 1:
+            vm_ip_netmask = f"/{vm_ip_netmask}"
+        if netmask_len == 4:
+            vm_ip_netmask = "/" + str(IPv4Network(f'0.0.0.0/{vm_ip_netmask}').prefixlen)
+    else:
+        vm_ip_netmask = ""
+
     cloud_init_user_data_template = '''#cloud-config
 user: {}
 password: "{}"
@@ -155,27 +182,30 @@ runcmd:
 '''.format(vm_username, vm_hashed_password, vm_hostname)
 
     if vm_static_ip_address:
-        cloud_init_user_data_template += "- set -x; sed -i -e 's/BOOTPROTO=\"dhcp\"/BOOTPROTO=\"static\"/g' /etc/sysconfig/network-scripts/ifcfg-eth0\n"
-        cloud_init_user_data_template += f"- set -x; echo 'IPADDR={vm_static_ip_address}' >> /etc/sysconfig/network-scripts/ifcfg-eth0\n"
+        cloud_init_user_data_template += f"- set -x; nmcli connection modify eth0 ipv4.method manual ipv4.addresses '{vm_static_ip_address}{vm_ip_netmask}'\n"
 
     if vm_ip_gateway:
-        cloud_init_user_data_template += f"- set -x; echo 'GATEWAY={vm_ip_gateway}' >> /etc/sysconfig/network-scripts/ifcfg-eth0\n"
-
-    if vm_ip_netmask:
-        cloud_init_user_data_template += f"- set -x; echo 'NETMASK={vm_ip_netmask}' >> /etc/sysconfig/network-scripts/ifcfg-eth0\n"
+        cloud_init_user_data_template += f"- set -x; nmcli connection modify eth0 ipv4.gateway '{vm_ip_gateway}'\n"
 
     if vm_dns_server_1:
         cloud_init_user_data_template += (
-            f"- set -x; if ! grep -q '^DNS1=' /etc/sysconfig/network-scripts/ifcfg-eth0; then echo 'DNS1={vm_dns_server_1}' >> /etc/sysconfig/network-scripts/ifcfg-eth0; else sed -i 's/^DNS1=.*/DNS1={vm_dns_server_1}/' /etc/sysconfig/network-scripts/ifcfg-eth0; fi\n"
+            f"- set -x; nmcli connection modify eth0 ipv4.dns '{vm_dns_server_1}'\n"
         )
 
     if vm_dns_server_2:
         cloud_init_user_data_template += (
-            f"- set -x; if ! grep -q '^DNS2=' /etc/sysconfig/network-scripts/ifcfg-eth0; then echo 'DNS2={vm_dns_server_2}' >> /etc/sysconfig/network-scripts/ifcfg-eth0; else sed -i 's/^DNS2=.*/DNS2={vm_dns_server_2}/' /etc/sysconfig/network-scripts/ifcfg-eth0; fi\n"
+            f"- set -x; nmcli connection modify eth0 +ipv4.dns '{vm_dns_server_2}'\n"
         )
 
+    if vm_nameserver:
+            cloud_init_user_data_template += (
+                f"- set -x; nmcli connection modify eth0 ipv4.dns-search '{vm_nameserver}'\n"
+            )
+
     # Restart the network to apply the changes
-    cloud_init_user_data_template += '- set -x; systemctl restart network\n'
+    cloud_init_user_data_template += (
+        f"- set -x; if uname -a | grep el7; then systemctl restart network; else systemctl restart NetworkManager ; fi\n"
+    )
 
     # Write the cloud_init_user_data_template to the specified output file
     with open(cloud_init_user_data_output, 'w') as output_file:

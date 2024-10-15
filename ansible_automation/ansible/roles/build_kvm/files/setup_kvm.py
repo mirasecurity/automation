@@ -102,7 +102,7 @@ def parse_args():
     )
     parser.add_argument(
         '--vm_ip_netmask', required=False,
-        default=None, help='IP Netmask for the VM',
+        default=None, help='IP Netmask for the VM. Supports dotted-decimal (eg. "255.255.255.255") and CIDR (eg. "/32") notations',
     )
     parser.add_argument(
         '--vm_dns_server_1', required=False,
@@ -111,6 +111,10 @@ def parse_args():
     parser.add_argument(
         '--vm_dns_server_2', required=False,
         default=None, help='DNS server 2 for the VM',
+    )
+    parser.add_argument(
+        '--vm_nameserver', required=False,
+        default=None, help='Nameserver for the the VM. Multiple can be specified comma-seperated.',
     )
 
     args = parser.parse_args()
@@ -176,6 +180,7 @@ if __name__ == '__main__':
         vm_ip_netmask=args.vm_ip_netmask,
         vm_dns_server_1=args.vm_dns_server_1,
         vm_dns_server_2=args.vm_dns_server_2,
+        vm_nameserver=args.vm_nameserver,
     )
 
     cloud_init_iso_output = str(
