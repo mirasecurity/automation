@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VM Deployment Automation &mdash; Virtual Machine Deployment 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=8d563738"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Ansible Playbooks" href="playbooks.html" />
+    <link rel="prev" title="Welcome to Virtual Machine Deployment Automation’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Virtual Machine Deployment
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">VM Deployment Automation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#description">Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#template-for-virtual-machine-deployment-kvm">Template for Virtual Machine Deployment KVM</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Template Fields</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#eto-setup-via-api">ETO Setup via API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cleanup">Cleanup</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="playbooks.html">Ansible Playbooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/deploy.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/setup_eto.html">Setup ETO Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/ansible.html">How Deployment Happens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="code/cleanup.html">Cleanup</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Virtual Machine Deployment</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">VM Deployment Automation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/setup.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="toctree-wrapper compound">
+</div>
+<section id="vm-deployment-automation">
+<h1>VM Deployment Automation<a class="headerlink" href="#vm-deployment-automation" title="Link to this heading"></a></h1>
+<p>This repository provides helper functions for deploying a variable number of virtual machines. The included examples requires an ETO that is using v2.1 software or later for the initial installation, as older builds do not have cloud-init support.</p>
+<p>The Ansible scripts generate necessary configurations for Netplan (Ubuntu) or Network Manager (RHEL) on the system. However, these configurations are basic examples and may need further customization. Refer to the VM GSG documentation for detailed instructions on creating more tailored configurations.</p>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h2>
+<p>The deployment code provided is designed to run on any machine that meets the prerequisite of having Python and Docker installed. The Python script orchestrates the deployment process by executing commands through a Docker container. This container is pre-configured with all the necessary requirements, including Ansible. The Python script passes a configuration JSON file to the Docker container, which then utilizes it for the deployment process.</p>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<p>Ensure that you have installed:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.docker.com/get-docker/">Docker</a></p></li>
+<li><p><a class="reference external" href="https://www.python.org/downloads/">Python3</a></p></li>
+</ul>
+</section>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Generate a secure SSH key in the local folder <code class="docutils literal notranslate"><span class="pre">ssh-keys/ansible</span></code>, not in the root .ssh as to not interfere with other SSH keys:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ssh-keygen<span class="w"> </span>-t<span class="w"> </span>rsa<span class="w"> </span>-b<span class="w"> </span><span class="m">4096</span><span class="w"> </span>-f<span class="w"> </span>ssh-keys/ansible
+</pre></div>
+</div>
+<p>Note: If the user does not add this, the deploy.py script will automatically create it.</p>
+<ol class="arabic simple">
+<li><p>Then startup the ansible docker container using</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+</pre></div>
+</div>
+<p>If you encounter permission-related issues, you might want to try running the command with sudo, like this:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+</pre></div>
+</div>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Set up your deployment configuration using <code class="docutils literal notranslate"><span class="pre">build_config.template.json</span></code> as a template to build your own configuration file. Please look at the <a class="reference external" href="/ansible_automation/README.md#template-fields">Template Fields</a> for a description of the required fields and what each field represents.</p></li>
+<li><p>Once your configuration json file is ready, then run the deployment script:</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>deploy.py<span class="w"> </span>--config<span class="w"> </span>&lt;config&gt;.json
+</pre></div>
+</div>
+<p>Or with optional parameters:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>python3<span class="w"> </span>deploy.py<span class="w"> </span>--config<span class="w">  </span>&lt;config&gt;.json<span class="w"> </span>--log-dir<span class="w"> </span>logs/<span class="w"> </span>--log-level<span class="w"> </span>INFO<span class="w"> </span>--allow-enrollment<span class="w"> </span>True
+</pre></div>
+</div>
+</section>
+<section id="description">
+<h2>Description<a class="headerlink" href="#description" title="Link to this heading"></a></h2>
+<p>The deployment script performs the following tasks:</p>
+<ol class="arabic simple">
+<li><p>Parses deployment arguments.</p></li>
+<li><p>Checks if Docker is running; if so, starts the ansible_automation container; if not, prompts the user to start Docker and exits.</p></li>
+<li><p>Sets up logging, creating a log file path based on the current timestamp and specified log directory.
+Creates the log directory if it doesn’t exist.</p></li>
+<li><p>Reads configuration data from a JSON file specified in the arguments.</p></li>
+<li><p>Initiates deployment, displaying progress and storing logs in the specified log file.</p></li>
+<li><p>Outputs messages indicating the start and end of deployment.</p></li>
+</ol>
+<p>The deployment works as follows:</p>
+<p><a class="reference external" href="https://github.com/mirasecurity/automation/blob/master/ansible_automation/flow-chart.jpg?raw=true">Flow Diagram</a></p>
+</section>
+<section id="template-for-virtual-machine-deployment-kvm">
+<h2>Template for Virtual Machine Deployment KVM<a class="headerlink" href="#template-for-virtual-machine-deployment-kvm" title="Link to this heading"></a></h2>
+<p>When filling out the <code class="docutils literal notranslate"><span class="pre">build_config.template.json</span></code> template to deploy virtual machines, follow the guidelines below.</p>
+<section id="id1">
+<h3>Template Fields<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>hypervisor_hostname</strong> (Required): The hostname of the hypervisor.</p></li>
+<li><p><strong>hypervisor_username</strong> (Required): Username for accessing the hypervisor.</p></li>
+<li><p><strong>hypervisor_password</strong> (Required): Password for accessing the hypervisor.</p></li>
+<li><p><strong>hypervisor_vm_image_loc</strong> (Required): Location of the image on the machine or URL.</p></li>
+<li><p><strong>hypervisor_dest_directory</strong> (Required): Destination location for storing the image.</p></li>
+<li><p><strong>vm_qcow_name</strong> (Required): Name of the QCOW image.</p></li>
+<li><p><strong>vm_vcpus</strong> (Optional): Number of virtual CPUs. (Default: 8)</p></li>
+<li><p><strong>vm_memory</strong> (Optional): Amount of memory in MB. (Default: 16384)</p></li>
+<li><p><strong>vm_os_variant</strong> (Optional): OS variant (Default: centos7.0).</p></li>
+<li><p><strong>vm_boot</strong> (Optional): Boot options (Default: hd,cdrom).</p></li>
+<li><p><strong>vm_cpu</strong> (Optional): CPU model (Default: host).</p></li>
+<li><p><strong>vm_source</strong> (Optional): Network source (Default: eno0).</p></li>
+<li><p><strong>vm_model</strong> (Optional): Network model (Default: virtio).</p></li>
+<li><p><strong>vm_source_mode</strong> (Optional): Source mode (Default: bridge).</p></li>
+<li><p><strong>vm_network_net_a</strong> (Required): Network bridge name to be created for for net-a.</p></li>
+<li><p><strong>vm_network_net_b</strong> (Required): Network bridge name to be created for for net-b.</p></li>
+<li><p><strong>vm_network_app_a</strong> (Required): Network bridge name to be created for for app-a.</p></li>
+<li><p><strong>vm_network_app_b</strong> (Required): Network bridge name to be created for for app-b.</p></li>
+<li><p><strong>vm_network_mir_a</strong> (Required): Network bridge name to be created for for mir-a.</p></li>
+<li><p><strong>vm_network_mir_b</strong> (Required): Network bridge name to be created for for mir-b.</p></li>
+<li><p><strong>vm_username</strong> (Required): Username for accessing the virtual machine.</p></li>
+<li><p><strong>vm_api_username</strong> (Optional): API username for the virtual machine (Default: mira).</p></li>
+<li><p><strong>vm_password</strong> (Required): Password for accessing the virtual machine.</p></li>
+<li><p><strong>vm_old_password</strong> (Required): Old/Default password for the virtual machine (if applicable).</p></li>
+<li><p><strong>vm_hostname</strong> (Required): New hostname of the virtual machine.</p></li>
+<li><p><strong>vm_static_ip_address</strong> (Optional): Static IP address for the virtual machine.</p></li>
+<li><p><strong>vm_ip_netmask</strong> (Optional): Subnet mask for the virtual machine’s IP address.</p></li>
+<li><p><strong>vm_ip_gateway</strong> (Optional): Gateway IP address for the virtual machine.</p></li>
+<li><p><strong>vm_dns_server_1</strong> (Optional): Primary DNS server for the virtual machine.</p></li>
+<li><p><strong>vm_dns_server_2</strong> (Optional): Secondary DNS server for the virtual machine.</p></li>
+<li><p><strong>vm_allow_enrollment</strong> (Optional): Boolean to allow the ETO to change it’s enrollment state.</p></li>
+</ol>
+<p>Note: Fields marked as (Optional) are not mandatory for deployment but may be required depending on your specific setup.</p>
+</section>
+</section>
+<section id="eto-setup-via-api">
+<h2>ETO Setup via API<a class="headerlink" href="#eto-setup-via-api" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">deploy.py</span></code> file also changes the default password for the ‘admin’ user for the ETO API. Additionally, the <code class="docutils literal notranslate"><span class="pre">setup_eto.py</span></code> file is responsible for modifying default settings and can be utilized independently. If <code class="docutils literal notranslate"><span class="pre">vm_static_ip_address</span></code> is specified in the <code class="docutils literal notranslate"><span class="pre">&lt;config&gt;.json</span></code> file, along with <code class="docutils literal notranslate"><span class="pre">vm_ip_netmask</span></code>, <code class="docutils literal notranslate"><span class="pre">vm_ip_gateway</span></code>, and <code class="docutils literal notranslate"><span class="pre">vm_allow_enrollment</span></code>, then the enrollment state for the ETO can be altered. Otherwise, the default API settings will remain unchanged.</p>
+<p>The script can be executed independently with the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>setup_eto.py<span class="w"> </span>--ip<span class="o">=</span>&lt;vm_static_ip_address&gt;<span class="w"> </span>--username<span class="o">=</span>&lt;vm_api_username&gt;<span class="w"> </span>--old_password<span class="o">=</span>&lt;vm_old_password&gt;<span class="w"> </span>--password<span class="o">=</span>&lt;vm_password&gt;<span class="w"> </span>--allow-enrollment<span class="o">=</span>&lt;vm_allow_enrollment&gt;
+</pre></div>
+</div>
+<p>This command will update the default password for the ETO and adjust the enrollment state accordingly.</p>
+</section>
+<section id="cleanup">
+<h2>Cleanup<a class="headerlink" href="#cleanup" title="Link to this heading"></a></h2>
+<p>Should something go wrong, or the user wishes to remove the VM from the system the <code class="docutils literal notranslate"><span class="pre">cleanup.py</span></code> is is made available. It requires the same configuration used for the <code class="docutils literal notranslate"><span class="pre">deploy.py</span></code> file. It’s purpose is to remove and delete the VM and associated files from it, along with the network configurations setup by Netplan (Ubuntu) or NetworkManager (RedHat). None of the system packages are modified by this play.</p>
+<p>The python file can be run with the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>cleanup.py<span class="w"> </span>--config<span class="w">  </span>&lt;config&gt;.json<span class="w"> </span>--log-dir<span class="w"> </span>logs/<span class="w"> </span>--log-level<span class="w"> </span>INFO
+</pre></div>
+</div>
+<p>The following is the build_config.template.json:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;hypervisor_hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;hostname&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;hypervisor_username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;username&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;hypervisor_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;secret&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;hypervisor_vm_image_loc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;location_on_machine/url&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;hypervisor_dest_directory&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/var/lib/libvirt/images/&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_qcow_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_vcpus&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_memory&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_os_variant&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;centos7.0&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_boot&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hd,cdrom&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_cpu&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;host&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_source&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;mgmt-interface&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtio&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_source_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;bridge&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_net_a&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-net-a&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_net_b&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-net-b&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_app_a&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-app-a&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_app_b&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-app-b&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_mir_a&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-mir-a&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_network_mir_b&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;br-mir-b&lt;X&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mira&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_api_username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;password&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_old_password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;password&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;hostname&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_static_ip_address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_ip_netmask&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_ip_gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_dns_server_1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_dns_server_2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;ip&gt;&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;vm_allow_enrollment&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Virtual Machine Deployment Automation’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="playbooks.html" class="btn btn-neutral float-right" title="Ansible Playbooks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mira Security.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

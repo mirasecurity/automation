@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>deploy &mdash; Virtual Machine Deployment 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=8d563738"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Virtual Machine Deployment
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">VM Deployment Automation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../playbooks.html">Ansible Playbooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/deploy.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/setup_eto.html">Setup ETO Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/ansible.html">How Deployment Happens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../code/cleanup.html">Cleanup</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Virtual Machine Deployment</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">deploy</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for deploy</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span> <span class="k">as</span> <span class="nn">log</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">from</span> <span class="nn">utils.ansible</span> <span class="kn">import</span> <span class="n">ansible_add_to_inventory_executor</span>
+<span class="kn">from</span> <span class="nn">utils.ansible</span> <span class="kn">import</span> <span class="n">ansible_log_writer_analyzer</span>
+<span class="kn">from</span> <span class="nn">utils.ansible</span> <span class="kn">import</span> <span class="n">ansible_run_check</span>
+<span class="kn">from</span> <span class="nn">utils.ansible</span> <span class="kn">import</span> <span class="n">ansible_ssh_key_exist</span>
+<span class="kn">from</span> <span class="nn">utils.ansible</span> <span class="kn">import</span> <span class="n">ansible_ssh_keys_generate</span>
+<span class="kn">from</span> <span class="nn">utils.cloud_init</span> <span class="kn">import</span> <span class="n">cloud_init_sha512_crypt</span>
+<span class="kn">from</span> <span class="nn">utils.cloud_init</span> <span class="kn">import</span> <span class="n">generate_random_salt</span>
+<span class="kn">from</span> <span class="nn">utils.docker</span> <span class="kn">import</span> <span class="n">ensure_container_running</span>
+<span class="kn">from</span> <span class="nn">utils.docker</span> <span class="kn">import</span> <span class="n">is_docker_running</span>
+<span class="kn">from</span> <span class="nn">utils.docker</span> <span class="kn">import</span> <span class="n">stop_container</span>
+<span class="kn">from</span> <span class="nn">utils.utils</span> <span class="kn">import</span> <span class="n">colors</span>
+<span class="kn">from</span> <span class="nn">utils.utils</span> <span class="kn">import</span> <span class="n">setup_logging</span>
+
+<span class="n">docker_name</span> <span class="o">=</span> <span class="s1">&#39;ansible_automation&#39;</span>
+
+
+<div class="viewcode-block" id="builder_func">
+<a class="viewcode-back" href="../code/deploy.html#deploy.builder_func">[docs]</a>
+<span class="k">def</span> <span class="nf">builder_func</span><span class="p">(</span><span class="n">build_options</span><span class="p">,</span> <span class="n">install_log_name</span><span class="p">,</span> <span class="n">log_level</span><span class="p">,</span> <span class="n">use_docker</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Execute a series of build steps based on provided options.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    build_options : list</span>
+<span class="sd">        A list of dictionaries containing build options.</span>
+<span class="sd">    install_log_name : str</span>
+<span class="sd">        The name of the installation log file.</span>
+<span class="sd">    log_level : str</span>
+<span class="sd">        The logging level.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function executes a series of build steps based on the provided `build_options`.</span>
+<span class="sd">    For each build option, it performs various tasks such as configuring hypervisors,</span>
+<span class="sd">    installing required packages, executing build scripts, and setting up virtual machines.</span>
+<span class="sd">    The function logs each step and checks for failures using the `ansible_log_writer_analyzer`</span>
+<span class="sd">    and `ansible_run_check` functions. If a failure occurs, the function logs an error message</span>
+<span class="sd">    and returns False. Otherwise, it returns True upon successful completion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log_check_bool</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">build</span> <span class="ow">in</span> <span class="n">build_options</span><span class="p">:</span>
+        <span class="c1"># -- Hypervisor</span>
+        <span class="n">hypervisor_hostname</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hypervisor_hostname&#39;</span><span class="p">)</span>
+        <span class="n">hypervisor_username</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hypervisor_username&#39;</span><span class="p">)</span>
+        <span class="n">hypervisor_password</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hypervisor_password&#39;</span><span class="p">)</span>
+
+        <span class="c1"># -- VM Configuration</span>
+        <span class="n">hypervisor_vm_image_loc</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hypervisor_vm_image_loc&#39;</span><span class="p">)</span>
+        <span class="n">hypervisor_dest_directory</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hypervisor_dest_directory&#39;</span><span class="p">)</span>
+        <span class="n">vm_qcow_name</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_qcow_name&#39;</span><span class="p">)</span>
+        <span class="n">vm_vcpus</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_vcpus&#39;</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+        <span class="n">vm_memory</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_memory&#39;</span><span class="p">,</span> <span class="mi">16384</span><span class="p">)</span>
+        <span class="n">vm_os_variant</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_os_variant&#39;</span><span class="p">,</span> <span class="s1">&#39;centos7.0&#39;</span><span class="p">)</span>
+        <span class="n">vm_boot</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_boot&#39;</span><span class="p">,</span> <span class="s1">&#39;hd,cdrom&#39;</span><span class="p">)</span>
+        <span class="n">vm_cpu</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_cpu&#39;</span><span class="p">,</span> <span class="s1">&#39;host&#39;</span><span class="p">)</span>
+        <span class="n">vm_source</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_source&#39;</span><span class="p">)</span>
+        <span class="n">vm_model</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_model&#39;</span><span class="p">)</span>
+        <span class="n">vm_source_mode</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_source_mode&#39;</span><span class="p">,</span> <span class="s1">&#39;bridge&#39;</span><span class="p">)</span>
+
+        <span class="n">vm_network_net_a</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_net_a&#39;</span><span class="p">)</span>
+        <span class="n">vm_network_net_b</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_net_b&#39;</span><span class="p">)</span>
+
+        <span class="n">vm_network_app_a</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_app_a&#39;</span><span class="p">)</span>
+        <span class="n">vm_network_app_b</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_app_b&#39;</span><span class="p">)</span>
+
+        <span class="n">vm_network_mir_a</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_mir_a&#39;</span><span class="p">)</span>
+        <span class="n">vm_network_mir_b</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_network_mir_b&#39;</span><span class="p">)</span>
+
+        <span class="n">vm_hostname</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_hostname&#39;</span><span class="p">)</span>
+        <span class="n">vm_password</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_password&#39;</span><span class="p">)</span>
+        <span class="n">vm_hashed_password</span> <span class="o">=</span> <span class="n">cloud_init_sha512_crypt</span><span class="p">(</span>
+            <span class="n">vm_password</span><span class="p">,</span> <span class="n">salt</span><span class="o">=</span><span class="n">generate_random_salt</span><span class="p">(),</span> <span class="n">rounds</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">vm_hashed_password</span> <span class="o">=</span> <span class="n">vm_hashed_password</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;$&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">$&#39;</span><span class="p">)</span>
+
+        <span class="n">vm_old_password</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_old_password&#39;</span><span class="p">)</span>
+        <span class="n">vm_username</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_username&#39;</span><span class="p">,</span> <span class="s1">&#39;root&#39;</span><span class="p">)</span>
+
+        <span class="c1"># ETO Network configuration</span>
+        <span class="n">vm_static_ip_address</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_static_ip_address&#39;</span><span class="p">)</span>
+        <span class="n">vm_ip_gateway</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_ip_gateway&#39;</span><span class="p">)</span>
+        <span class="n">vm_ip_netmask</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_ip_netmask&#39;</span><span class="p">)</span>
+        <span class="n">vm_dns_server_1</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_dns_server_1&#39;</span><span class="p">)</span>
+        <span class="n">vm_dns_server_2</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_dns_server_2&#39;</span><span class="p">)</span>
+
+        <span class="c1"># ETO API Config</span>
+        <span class="n">vm_api_username</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_api_username&#39;</span><span class="p">)</span>
+        <span class="n">vm_allow_enrollment</span> <span class="o">=</span> <span class="n">build</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;vm_allow_enrollment&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">vm_static_ip_address</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Cannot connect to ETO unless a static IP is provided, please note that the default settings for the API will have to be changed manually&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Check if it was not successfully added to the inventory</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">ansible_add_to_inventory_executor</span><span class="p">(</span>
+            <span class="n">hostname</span><span class="o">=</span><span class="n">hypervisor_hostname</span><span class="p">,</span>
+            <span class="n">username</span><span class="o">=</span><span class="n">hypervisor_username</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="n">hypervisor_password</span><span class="p">,</span>
+            <span class="n">use_docker</span><span class="o">=</span><span class="n">use_docker</span><span class="p">,</span>
+            <span class="n">docker_name</span><span class="o">=</span><span class="n">docker_name</span><span class="p">,</span>
+            <span class="n">install_log_name</span><span class="o">=</span><span class="n">install_log_name</span><span class="p">,</span>
+            <span class="n">log_level</span><span class="o">=</span><span class="n">log_level</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Something went wrong when adding </span><span class="si">{</span><span class="n">hypervisor_hostname</span><span class="si">}</span><span class="s1"> to the inventory&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Step 1: Add the SSH keys&#39;</span><span class="p">)</span>
+        <span class="c1"># Step 1: Add the SSH keys</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="s1">&#39;echo Adding SSH Keys&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">make_sure_ssh_available</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ansible-playbook playbooks/ssh_setup_individual.yml --extra-vars &quot;hypervisor_username=</span><span class="si">{</span><span class="n">hypervisor_username</span><span class="si">}</span><span class="s1"> hypervisor_password=</span><span class="si">{</span><span class="n">hypervisor_password</span><span class="si">}</span><span class="s1"> hypervisor_hostname=</span><span class="si">{</span><span class="n">hypervisor_hostname</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="n">ssh_docker_command</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;docker exec -t </span><span class="si">{</span><span class="n">docker_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">make_sure_ssh_available</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="n">ssh_docker_command</span><span class="p">,</span> <span class="n">log_level</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># If failed exit the loop</span>
+        <span class="k">if</span> <span class="n">ansible_run_check</span><span class="p">(</span><span class="n">log_check_bool</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Failed Step 1&#39;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Step 2: Install required packages and dependencies&#39;</span><span class="p">)</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="s1">&#39;echo Installing requirements&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">install_required_packages</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ansible-playbook playbooks/setup.yml --extra-vars </span><span class="se">\</span>
+<span class="s1">            &quot;hypervisor_hostname=</span><span class="si">{</span><span class="n">hypervisor_hostname</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_net_a=</span><span class="si">{</span><span class="n">vm_network_net_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_net_b=</span><span class="si">{</span><span class="n">vm_network_net_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_app_a=</span><span class="si">{</span><span class="n">vm_network_app_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_app_b=</span><span class="si">{</span><span class="n">vm_network_app_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_mir_a=</span><span class="si">{</span><span class="n">vm_network_mir_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_mir_b=</span><span class="si">{</span><span class="n">vm_network_mir_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_qcow_name=</span><span class="si">{</span><span class="n">vm_qcow_name</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="n">install_required_packages_docker_command</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;docker exec -t </span><span class="si">{</span><span class="n">docker_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">install_required_packages</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="n">install_required_packages_docker_command</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># If failed exit the loop</span>
+        <span class="k">if</span> <span class="n">ansible_run_check</span><span class="p">(</span><span class="n">log_check_bool</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Failed Step 2&#39;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Step 3: Run KVM Installation&#39;</span><span class="p">)</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="s1">&#39;echo Running Build&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">command_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;ansible-playbook playbooks/install_kvm.yml --extra-vars </span><span class="se">\</span>
+<span class="s1">            &quot;hypervisor_hostname=</span><span class="si">{</span><span class="n">hypervisor_hostname</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             hypervisor_vm_image_loc=</span><span class="si">{</span><span class="n">hypervisor_vm_image_loc</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             hypervisor_dest_directory=</span><span class="si">{</span><span class="n">hypervisor_dest_directory</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_qcow_name=</span><span class="si">{</span><span class="n">vm_qcow_name</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_vcpus=</span><span class="si">{</span><span class="n">vm_vcpus</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_memory=</span><span class="si">{</span><span class="n">vm_memory</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_os_variant=</span><span class="si">{</span><span class="n">vm_os_variant</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_boot=</span><span class="si">{</span><span class="n">vm_boot</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_cpu=</span><span class="si">{</span><span class="n">vm_cpu</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_source=</span><span class="si">{</span><span class="n">vm_source</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_model=</span><span class="si">{</span><span class="n">vm_model</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_source_mode=</span><span class="si">{</span><span class="n">vm_source_mode</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_net_a=</span><span class="si">{</span><span class="n">vm_network_net_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_net_b=</span><span class="si">{</span><span class="n">vm_network_net_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_app_a=</span><span class="si">{</span><span class="n">vm_network_app_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_app_b=</span><span class="si">{</span><span class="n">vm_network_app_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_mir_a=</span><span class="si">{</span><span class="n">vm_network_mir_a</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_network_mir_b=</span><span class="si">{</span><span class="n">vm_network_mir_b</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_username=</span><span class="si">{</span><span class="n">vm_username</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_hashed_password=</span><span class="si">{</span><span class="n">vm_hashed_password</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_hostname=</span><span class="si">{</span><span class="n">vm_hostname</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_static_ip_address=</span><span class="si">{</span><span class="n">vm_static_ip_address</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_ip_gateway=</span><span class="si">{</span><span class="n">vm_ip_gateway</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_ip_netmask=</span><span class="si">{</span><span class="n">vm_ip_netmask</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_dns_server_1=</span><span class="si">{</span><span class="n">vm_dns_server_1</span><span class="si">}</span><span class="se">\</span>
+<span class="s1">             vm_dns_server_2=</span><span class="si">{</span><span class="n">vm_dns_server_2</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="n">docker_command</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;docker exec -t </span><span class="si">{</span><span class="n">docker_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">command_name</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                <span class="n">install_log_name</span><span class="p">,</span> <span class="n">docker_command</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># If failed break out of the loop</span>
+        <span class="k">if</span> <span class="n">ansible_run_check</span><span class="p">(</span><span class="n">log_check_bool</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Failed Step 3&#39;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">vm_static_ip_address</span><span class="p">:</span>
+            <span class="c1"># Setup the VM Instance</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Step 4: Setup the VM via API&#39;</span><span class="p">)</span>
+            <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                    <span class="n">install_log_name</span><span class="p">,</span> <span class="s1">&#39;echo Setting up the ETO&#39;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">command_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;python3 /deploy/setup_eto.py --ip=</span><span class="si">{</span><span class="n">vm_static_ip_address</span><span class="si">}</span><span class="s1"> --username=</span><span class="si">{</span><span class="n">vm_api_username</span><span class="si">}</span><span class="s1"> --old_password=</span><span class="si">{</span><span class="n">vm_old_password</span><span class="si">}</span><span class="s1"> --password=</span><span class="si">{</span><span class="n">vm_password</span><span class="si">}</span><span class="s1"> --allow-enrollment=</span><span class="si">{</span><span class="n">vm_allow_enrollment</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">docker_command</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;docker exec -t </span><span class="si">{</span><span class="n">docker_name</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">command_name</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">log_check_bool</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">ansible_log_writer_analyzer</span><span class="p">(</span>
+                    <span class="n">install_log_name</span><span class="p">,</span> <span class="n">docker_command</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Cannot connect to ETO unless a static IP is provided&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ansible_run_check</span><span class="p">(</span><span class="n">log_check_bool</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">hypervisor_hostname</span> <span class="o">+</span> <span class="s1">&#39; Installation Failed</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">hypervisor_hostname</span> <span class="o">+</span> <span class="s1">&#39; Installation Succeeded</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+
+<div class="viewcode-block" id="parse_deployment_arguments">
+<a class="viewcode-back" href="../code/deploy.html#deploy.parse_deployment_arguments">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_deployment_arguments</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse command-line arguments for deployment configuration.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    argparse.Namespace</span>
+<span class="sd">        Parsed command-line arguments.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    Example usage:</span>
+<span class="sd">        python deploy.py --config /path/to/config.json --log-dir /path/to/logs --log-level DEBUG --allow-enrollment True</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function parses command-line arguments for deployment configuration. It returns</span>
+<span class="sd">    an `argparse.Namespace` object containing the parsed arguments.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Deployment Config Parser&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--config&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to deployment configuration file&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--log-dir&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to deployment logs&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--log-level&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;INFO&#39;</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+            <span class="s1">&#39;DEBUG&#39;</span><span class="p">,</span> <span class="s1">&#39;INFO&#39;</span><span class="p">,</span> <span class="s1">&#39;WARNING&#39;</span><span class="p">,</span> <span class="s1">&#39;ERROR&#39;</span><span class="p">,</span> <span class="s1">&#39;CRITICAL&#39;</span><span class="p">,</span> <span class="s1">&#39;VERBOSE&#39;</span><span class="p">,</span>
+        <span class="p">],</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL, VERBOSE)&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--allow-enrollment&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">args</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This script is designed to handle deployment tasks. When executed directly, it performs the following steps:</span>
+
+<span class="sd">    1. Parses deployment arguments.</span>
+<span class="sd">    2. Checks if Docker is running; if up, starts the ansible_automation container; if not, prompts the user to start Docker and exits.</span>
+<span class="sd">    3. Sets up logging, creating a log file path based on the current timestamp and specified log directory.</span>
+<span class="sd">    4. Creates the log directory if it doesn&#39;t exist.</span>
+<span class="sd">    5. Reads configuration data from a JSON file specified in the arguments.</span>
+<span class="sd">    6. Initiates deployment, displaying progress and storing logs in the specified log file.</span>
+<span class="sd">    7. Outputs messages indicating the start and end of deployment.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_deployment_arguments</span><span class="p">()</span>
+
+    <span class="c1"># Check if the docker container is running</span>
+    <span class="k">if</span> <span class="n">is_docker_running</span><span class="p">():</span>
+        <span class="c1"># Check the existence of the ssh-keys directory</span>
+        <span class="k">if</span> <span class="n">ansible_ssh_key_exist</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="s1">&#39;./ssh-keys&#39;</span><span class="p">,</span> <span class="n">key_name</span><span class="o">=</span><span class="s1">&#39;ansible&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">GREEN</span> <span class="o">+</span> <span class="s1">&#39;SSH keys exist&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">GREEN</span><span class="p">)</span>
+            <span class="n">ensure_container_running</span><span class="p">(</span>
+                <span class="n">docker_name</span><span class="p">,</span> <span class="n">compose_file</span><span class="o">=</span><span class="s1">&#39;docker-compose.yml&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">RED</span> <span class="o">+</span> <span class="s1">&#39;Stopping the docker container&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">)</span>
+            <span class="n">stop_container</span><span class="p">(</span><span class="n">docker_name</span><span class="p">,</span> <span class="n">compose_file</span><span class="o">=</span><span class="s1">&#39;docker-compose.yml&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">RED</span> <span class="o">+</span> <span class="s1">&#39;Generating the SSH keys&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">)</span>
+            <span class="n">ansible_ssh_keys_generate</span><span class="p">(</span>
+                <span class="n">directory</span><span class="o">=</span><span class="s1">&#39;./ssh-keys&#39;</span><span class="p">,</span> <span class="n">key_name</span><span class="o">=</span><span class="s1">&#39;ansible&#39;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="n">colors</span><span class="o">.</span><span class="n">RED</span> <span class="o">+</span> <span class="s1">&#39;Starting the containers to ensure the volume mounts correctly&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">ensure_container_running</span><span class="p">(</span>
+                <span class="n">docker_name</span><span class="p">,</span> <span class="n">compose_file</span><span class="o">=</span><span class="s1">&#39;docker-compose.yml&#39;</span><span class="p">,</span> <span class="n">build</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">RED</span> <span class="o">+</span> <span class="s1">&#39;Docker is not running, please start it.&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">)</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Setup Logging</span>
+    <span class="n">log_dir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">log_dir</span>
+    <span class="k">if</span> <span class="n">log_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">log_dir</span><span class="p">,</span> <span class="s1">&#39;deploy-&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log_file_path</span> <span class="o">=</span> <span class="s1">&#39;logs/deploy-&#39;</span>
+    <span class="n">log_file_path</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span>
+        <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">log_file_path</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">log_file_path</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.log&#39;</span>
+
+    <span class="c1"># Create the directory if it doesn&#39;t exist</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">log_file_path</span><span class="p">)):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">log_file_path</span><span class="p">))</span>
+    <span class="n">log_level</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">upper</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">log_level</span><span class="p">)</span>
+    <span class="n">setup_logging</span><span class="p">(</span><span class="n">log_file_path</span><span class="p">,</span> <span class="n">log_level</span><span class="o">=</span><span class="n">log_level</span><span class="p">)</span>
+
+    <span class="c1"># Get the data from the JSON file</span>
+    <span class="n">config_file_path</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">config</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
+        <span class="n">configuration</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_file</span><span class="p">)</span>
+
+    <span class="c1"># Begin Deployment</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">GREEN</span> <span class="o">+</span> <span class="s1">&#39;Deployment has begun&#39;</span> <span class="o">+</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Logs are stored in </span><span class="si">{</span><span class="n">log_file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">builder_func</span><span class="p">(</span>
+        <span class="n">configuration</span><span class="p">,</span> <span class="n">log_file_path</span><span class="p">,</span>
+        <span class="n">log_level</span><span class="p">,</span> <span class="n">use_docker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">colors</span><span class="o">.</span><span class="n">GREEN</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="n">colors</span><span class="o">.</span><span class="n">RED</span><span class="p">),</span>
+        <span class="s1">&#39;Deployment has Ended&#39;</span><span class="p">,</span> <span class="n">colors</span><span class="o">.</span><span class="n">END</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mira Security.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

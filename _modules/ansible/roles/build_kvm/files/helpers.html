@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ansible.roles.build_kvm.files.helpers &mdash; Virtual Machine Deployment 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../../_static/documentation_options.js?v=8d563738"></script>
+        <script src="../../../../../_static/doctools.js?v=888ff710"></script>
+        <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            Virtual Machine Deployment
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../setup.html">VM Deployment Automation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../playbooks.html">Ansible Playbooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code/deploy.html">Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code/utils.html">Utils</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code/setup_eto.html">Setup ETO Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code/ansible.html">How Deployment Happens</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../code/cleanup.html">Cleanup</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">Virtual Machine Deployment</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">ansible.roles.build_kvm.files.helpers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for ansible.roles.build_kvm.files.helpers</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+<span class="kn">from</span> <span class="nn">ipaddress</span> <span class="kn">import</span> <span class="n">IPv4Network</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+
+
+<div class="viewcode-block" id="create_directory">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.create_directory">[docs]</a>
+<span class="k">def</span> <span class="nf">create_directory</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="download_or_retrieve_file">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.download_or_retrieve_file">[docs]</a>
+<span class="k">def</span> <span class="nf">download_or_retrieve_file</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Download a file from a URL or file path.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    url_or_file : str</span>
+<span class="sd">        The URL of the file to download or the local file path.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        The absolute file path where the downloaded file is saved.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function supports downloading files from HTTP, as well as handling local file paths. The function prints</span>
+<span class="sd">    the file path and the source (URL or local file) for logging purposes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parsed_url</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;http&#39;</span> <span class="ow">or</span> <span class="n">parsed_url</span><span class="o">.</span><span class="n">scheme</span> <span class="o">==</span> <span class="s1">&#39;https&#39;</span><span class="p">:</span>
+        <span class="c1"># HTTP(S) handling</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">)</span>
+        <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">parsed_url</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;file_path:&#39;</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;from URL&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Local file</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;file_path:&#39;</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;local file&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">file_path</span></div>
+
+
+
+<div class="viewcode-block" id="download_extract_and_rename_qcow2">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.download_extract_and_rename_qcow2">[docs]</a>
+<span class="k">def</span> <span class="nf">download_extract_and_rename_qcow2</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">,</span> <span class="n">extract_path</span><span class="p">,</span> <span class="n">new_qcow_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loc_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Download, extract, and optionally rename a qcow2 file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    url_or_file : str</span>
+<span class="sd">        The URL or file path of the qcow2 file.</span>
+<span class="sd">    extract_path : str</span>
+<span class="sd">        The path to extract the contents of the qcow2 file.</span>
+<span class="sd">    new_qcow_file : str, optional</span>
+<span class="sd">        The new name for the qcow2 file (default is None).</span>
+<span class="sd">    loc_dir : str, optional</span>
+<span class="sd">        The directory within the extracted path where the qcow2 file will be placed (default is None).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tuple[str, Path, str]</span>
+<span class="sd">        A tuple containing the path of the qcow2 file, the extraction path, and the file path of the downloaded file.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function downloads a qcow2 file from a URL or uses a file path if provided. It extracts the contents of the qcow2</span>
+<span class="sd">    file to the specified extraction path. If a new name is specified, it renames the qcow2 file accordingly. The function</span>
+<span class="sd">    returns a tuple containing the path of the qcow2 file, the extraction path, and the file path of the downloaded file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Example usage:</span>
+    <span class="c1"># url_or_file = &quot;http://example.com/sample.txt&quot;</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">download_or_retrieve_file</span><span class="p">(</span><span class="n">url_or_file</span><span class="p">)</span>
+
+    <span class="c1"># extract the file to the extract_path</span>
+    <span class="k">with</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r:gz&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">tar</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">tar</span><span class="o">.</span><span class="n">getmembers</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;member&#39;</span><span class="p">,</span> <span class="n">member</span><span class="p">)</span>
+            <span class="c1"># Ensures there is not a race condition on the machine</span>
+            <span class="n">extract_path</span> <span class="o">=</span> <span class="n">extract_path</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="n">loc_dir</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">extract_path</span><span class="p">)</span>
+            <span class="n">tar</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">extract_path</span><span class="p">,</span> <span class="n">members</span><span class="o">=</span><span class="p">[</span><span class="n">member</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;extract_path: &#39;</span><span class="p">,</span> <span class="n">extract_path</span><span class="p">)</span>
+
+    <span class="n">qcow2_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">extract_path</span><span class="p">,</span> <span class="n">member</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;qcow2_file: &#39;</span><span class="p">,</span> <span class="n">qcow2_file</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">new_qcow_file</span><span class="p">:</span>
+        <span class="n">new_qcow_file</span> <span class="o">=</span> <span class="n">new_qcow_file</span> <span class="o">+</span> <span class="s1">&#39;.qcow2&#39;</span>
+
+    <span class="c1"># rename the qcow2 file if a new name is specified</span>
+    <span class="k">if</span> <span class="n">qcow2_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">new_qcow_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">new_qcow2_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">qcow2_file</span><span class="p">),</span> <span class="n">new_qcow_file</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">qcow2_file</span><span class="p">,</span> <span class="n">new_qcow2_file</span><span class="p">)</span>
+        <span class="n">qcow2_file</span> <span class="o">=</span> <span class="n">new_qcow2_file</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;qcow2_file new name: &#39;</span><span class="p">,</span> <span class="n">qcow2_file</span><span class="p">)</span>
+
+    <span class="c1"># return the directory of the qcow2 file</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">qcow2_file</span> <span class="k">if</span> <span class="n">qcow2_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Path</span><span class="p">(</span><span class="n">extract_path</span><span class="p">),</span> <span class="n">file_path</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_cloud_init_files">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.generate_cloud_init_files">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_cloud_init_files</span><span class="p">(</span>
+        <span class="n">vm_username</span><span class="p">,</span>
+        <span class="n">vm_hashed_password</span><span class="p">,</span>
+        <span class="n">cloud_init_user_data_output</span><span class="p">,</span>
+        <span class="n">cloud_init_meta_data_output</span><span class="p">,</span>
+        <span class="n">vm_hostname</span><span class="p">,</span>
+        <span class="n">vm_static_ip_address</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">vm_ip_gateway</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">vm_ip_netmask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">vm_dns_server_1</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">vm_dns_server_2</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">vm_nameserver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate cloud-init scripts for configuring a virtual machine.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vm_username : str</span>
+<span class="sd">        The username for the virtual machine.</span>
+<span class="sd">    vm_hashed_password : str</span>
+<span class="sd">        The hashed password for the virtual machine user.</span>
+<span class="sd">    cloud_init_user_data_output : str</span>
+<span class="sd">        The path to the output file for cloud-init user data.</span>
+<span class="sd">    cloud_init_meta_data_output : str</span>
+<span class="sd">        The path to the output file for cloud-init metadata.</span>
+<span class="sd">    vm_hostname : str</span>
+<span class="sd">        The hostname for the virtual machine.</span>
+<span class="sd">    vm_static_ip_address : str, optional</span>
+<span class="sd">        The static IP address for the virtual machine (default is None).</span>
+<span class="sd">    vm_ip_gateway : str, optional</span>
+<span class="sd">        The IP gateway for the virtual machine (default is None).</span>
+<span class="sd">    vm_ip_netmask : str, optional</span>
+<span class="sd">        The IP netmask for the virtual machine (default is None).</span>
+<span class="sd">        Supports dotted-decimal (eg. &#39;255.255.255.255&#39;) and CIDR (eg. &#39;/32&#39;) notations.</span>
+<span class="sd">    vm_dns_server_1 : str, optional</span>
+<span class="sd">        The primary DNS server for the virtual machine (default is None).</span>
+<span class="sd">    vm_dns_server_2 : str, optional</span>
+<span class="sd">        The secondary DNS server for the virtual machine (default is None).</span>
+<span class="sd">    vm_nameserver: str, optional</span>
+<span class="sd">        The nameserver for the virtual machine (default is None).</span>
+<span class="sd">        Multiple can be specified comma-seperated.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function generates cloud-init scripts for configuring a virtual machine. It creates a cloud-init</span>
+<span class="sd">    user data template based on the provided parameters, including the user, password, hostname, and networking</span>
+<span class="sd">    settings. The generated user data template is written to the specified `cloud_init_user_data_output` file,</span>
+<span class="sd">    while the metadata template containing only the hostname is written to the `cloud_init_meta_data_output` file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert netmask to CIDR notation for nmcli</span>
+    <span class="k">if</span> <span class="n">vm_ip_netmask</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">netmask_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vm_ip_netmask</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">netmask_len</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">vm_ip_netmask</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">vm_ip_netmask</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;/</span><span class="si">{</span><span class="n">vm_ip_netmask</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">netmask_len</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">vm_ip_netmask</span> <span class="o">=</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">IPv4Network</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;0.0.0.0/</span><span class="si">{</span><span class="n">vm_ip_netmask</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">prefixlen</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vm_ip_netmask</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="n">cloud_init_user_data_template</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;#cloud-config</span>
+<span class="s1">user: </span><span class="si">{}</span>
+<span class="s1">password: &quot;</span><span class="si">{}</span><span class="s1">&quot;</span>
+<span class="s1">chpasswd: {{expire: False}}</span>
+<span class="s1">ssh_pwauth: True</span>
+<span class="s1">runcmd:</span>
+<span class="s1">- hostnamectl set-hostname </span><span class="si">{}</span>
+<span class="s1">&#39;&#39;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">vm_username</span><span class="p">,</span> <span class="n">vm_hashed_password</span><span class="p">,</span> <span class="n">vm_hostname</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vm_static_ip_address</span><span class="p">:</span>
+        <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;- set -x; nmcli connection modify eth0 ipv4.method manual ipv4.addresses &#39;</span><span class="si">{</span><span class="n">vm_static_ip_address</span><span class="si">}{</span><span class="n">vm_ip_netmask</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">vm_ip_gateway</span><span class="p">:</span>
+        <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;- set -x; nmcli connection modify eth0 ipv4.gateway &#39;</span><span class="si">{</span><span class="n">vm_ip_gateway</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">vm_dns_server_1</span><span class="p">:</span>
+        <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;- set -x; nmcli connection modify eth0 ipv4.dns &#39;</span><span class="si">{</span><span class="n">vm_dns_server_1</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vm_dns_server_2</span><span class="p">:</span>
+        <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;- set -x; nmcli connection modify eth0 +ipv4.dns &#39;</span><span class="si">{</span><span class="n">vm_dns_server_2</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vm_nameserver</span><span class="p">:</span>
+            <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;- set -x; nmcli connection modify eth0 ipv4.dns-search &#39;</span><span class="si">{</span><span class="n">vm_nameserver</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Restart the network to apply the changes</span>
+    <span class="n">cloud_init_user_data_template</span> <span class="o">+=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;- set -x; if uname -a | grep el7; then systemctl restart network; else systemctl restart NetworkManager ; fi</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Write the cloud_init_user_data_template to the specified output file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cloud_init_user_data_output</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_file</span><span class="p">:</span>
+        <span class="n">output_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cloud_init_user_data_template</span><span class="p">)</span>
+
+    <span class="n">cloud_init_meta_data_template</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;hostname: </span><span class="si">{</span><span class="n">vm_hostname</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="c1"># Write the cloud_init_meta_data_template to the specified output file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">cloud_init_meta_data_output</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_file</span><span class="p">:</span>
+        <span class="n">output_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cloud_init_meta_data_template</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_cloud_init_iso">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.generate_cloud_init_iso">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_cloud_init_iso</span><span class="p">(</span><span class="n">cloud_init_iso_name</span><span class="p">,</span> <span class="n">user_data_directory</span><span class="p">,</span> <span class="n">meta_data_directory</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate a cloud-init ISO image.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cloud_init_iso_name : str</span>
+<span class="sd">        The name of the cloud-init ISO image to generate.</span>
+<span class="sd">    user_data_directory : str</span>
+<span class="sd">        The directory containing the user data file.</span>
+<span class="sd">    meta_data_directory : str</span>
+<span class="sd">        The directory containing the metadata file.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function generates a cloud-init ISO image using the `genisoimage` command-line tool.</span>
+<span class="sd">    It combines the user data and metadata files from the specified directories into the ISO image.</span>
+<span class="sd">    The generated ISO image is saved with the provided `cloud_init_iso_name`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s1">&#39;genisoimage&#39;</span><span class="p">,</span> <span class="s1">&#39;-output&#39;</span><span class="p">,</span> <span class="n">cloud_init_iso_name</span><span class="p">,</span> <span class="s1">&#39;-volid&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;cidata&#39;</span><span class="p">,</span> <span class="s1">&#39;-joliet&#39;</span><span class="p">,</span> <span class="s1">&#39;-rock&#39;</span><span class="p">,</span> <span class="n">user_data_directory</span><span class="p">,</span> <span class="n">meta_data_directory</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">command</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="clean_up_sensitive_info">
+<a class="viewcode-back" href="../../../../../code/ansible/helpers.html#ansible.roles.build_kvm.files.helpers.clean_up_sensitive_info">[docs]</a>
+<span class="k">def</span> <span class="nf">clean_up_sensitive_info</span><span class="p">(</span><span class="n">files_to_delete</span><span class="p">:</span> <span class="nb">list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Delete sensitive files from the system.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    files_to_delete : list</span>
+<span class="sd">        A list of file paths to delete.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    This function iterates through the list of file paths provided in `files_to_delete`</span>
+<span class="sd">    and attempts to delete each file using the `os.remove` function. If deletion is successful,</span>
+<span class="sd">    a message is printed indicating the file was deleted. If deletion fails due to an OSError,</span>
+<span class="sd">    an error message is printed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">files_to_delete</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">file_name</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Deleted: </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error deleting </span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Mira Security.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
